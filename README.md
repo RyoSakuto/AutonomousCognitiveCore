@@ -2,11 +2,21 @@
 
 MVP++ implementation of an autonomous cognitive loop based on the blueprint.
 
+![ACC CI](https://github.com/RyoSakuto/AutonomousCognitiveCore/actions/workflows/acc-ci.yml/badge.svg)
+
 ## Documentation
 
 - Full technical documentation index: `docs/README.md`
 - Original concept blueprint (legacy): `docs/original-blueprint.md`
 - Repo setup guide (GitHub): `docs/repo-bootstrap.md`
+
+## Repository Health
+
+- License: `MIT` (`LICENSE`)
+- Changelog: `CHANGELOG.md`
+- Contribution guide: `CONTRIBUTING.md`
+- Security policy: `SECURITY.md`
+- Code of conduct: `CODE_OF_CONDUCT.md`
 
 ## What is implemented
 

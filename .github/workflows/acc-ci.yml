@@ -1,0 +1,32 @@
+name: ACC CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  acc-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile check
+        run: python3 -m compileall acc main.py
+
+      - name: Runtime smoke check
+        run: python3 main.py --cycles 1 --db-path /tmp/acc_ci.db
+
+      - name: Task pipeline smoke check
+        run: |
+          python3 main.py --db-path /tmp/acc_ci.db --create-task "CI smoke task" --task-status queued --task-title "CI"
+          python3 main.py --db-path /tmp/acc_ci.db --execute-queue-now
