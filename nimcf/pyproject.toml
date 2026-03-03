@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nimcf"
+version = "0.1.0"
+description = "Neurogenesis-Inspired Modular Cognition Framework prototype"
+authors = [{ name = "Rico A. Huebner" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

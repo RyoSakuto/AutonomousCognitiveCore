@@ -1,0 +1,33 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+**/__pycache__/
+
+.venv/
+venv/
+.pytest_cache/
+**/.pytest_cache/
+
+*.db
+*.sqlite
+*.sqlite3
+
+data/*.db
+data/*.db-journal
+
+*.log
+*.jsonl
+*.lock
+
+.DS_Store
+
+# Local archives/backups from cleanup/reset operations
+.archive/
+
+# Generated runtime artifacts from integrated projects
+KIdieKIruft/orchestrator/runs/
+KIdieKIruft/dist/
+KIdieKIruft/archive/
+nimcf/archive/
+nimcf/outbox/

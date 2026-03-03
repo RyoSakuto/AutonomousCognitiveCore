@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-02-14T19:36:59Z",
+  "all_routes_passed": true,
+  "route_count": 6,
+  "routes": [
+    {
+      "layout_name": "classic",
+      "level_id": "L1",
+      "profile_id": "extract_fast_v1",
+      "route_name": "win",
+      "commands": "wdsdddaasssdd",
+      "hazard_density": "low",
+      "hazard_count": 2,
+      "starting_hp": 3,
+      "turn_limit": 16,
+      "enemy_turns_per_round": 1,
+      "commands_total": 13,
+      "commands_consumed": 13,
+      "ended_before_commands_finished": false,
+      "expected_status": "win",
+      "actual_status": "win",
+      "status_matches": true,
+      "score": 1022,
+      "expected_score_range": {
+        "min": 920,
+        "max": 1040
+      },
+      "score_in_expected_range": true,
+      "hp": 2,
+      "turns_left": 3,
+      "player_pos": [
+        4,
+        4
+      ],
+      "enemy_pos": [
+        4,
+        3
+      ],
+      "passed": true
+    },
+    {
+      "layout_name": "classic",
+      "level_id": "L1",
+      "profile_id": "early_collapse_v1",
+      "route_name": "lose",
+      "commands": "wwwwww",
+      "hazard_density": "low",
+      "hazard_count": 2,
+      "starting_hp": 3,
+      "turn_limit": 16,
+      "enemy_turns_per_round": 1,
+      "commands_total": 6,
+      "commands_consumed": 6,
+      "ended_before_commands_finished": false,
+      "expected_status": "lose",
+      "actual_status": "lose",
+      "status_matches": true,
+      "score": 0,
+      "expected_score_range": {
+        "min": 0,
+        "max": 40
+      },
+      "score_in_expected_range": true,
+      "hp": 0,
+      "turns_left": 10,
+      "player_pos": [
+        0,
+        0
+      ],
+      "enemy_pos": [
+        0,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "layout_name": "corridor",
+      "level_id": "L2",
+      "profile_id": "corridor_dash_v1",
+      "route_name": "win",
+      "commands": "dwwddwdwd",
+      "hazard_density": "normal",
+      "hazard_count": 4,
+      "starting_hp": 10,
+      "turn_limit": 14,
+      "enemy_turns_per_round": 2,
+      "commands_total": 9,
+      "commands_consumed": 9,
+      "ended_before_commands_finished": false,
+      "expected_status": "win",
+      "actual_status": "win",
+      "status_matches": true,
+      "score": 777,
+      "expected_score_range": {
+        "min": 730,
+        "max": 830
+      },
+      "score_in_expected_range": true,
+      "hp": 2,
+      "turns_left": 5,
+      "player_pos": [
+        5,
+        0
+      ],
+      "enemy_pos": [
+        5,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "layout_name": "corridor",
+      "level_id": "L2",
+      "profile_id": "corridor_pinch_v1",
+      "route_name": "lose",
+      "commands": "wddwsad",
+      "hazard_density": "normal",
+      "hazard_count": 4,
+      "starting_hp": 10,
+      "turn_limit": 14,
+      "enemy_turns_per_round": 2,
+      "commands_total": 7,
+      "commands_consumed": 7,
+      "ended_before_commands_finished": false,
+      "expected_status": "lose",
+      "actual_status": "lose",
+      "status_matches": true,
+      "score": 0,
+      "expected_score_range": {
+        "min": 0,
+        "max": 40
+      },
+      "score_in_expected_range": true,
+      "hp": 0,
+      "turns_left": 7,
+      "player_pos": [
+        2,
+        3
+      ],
+      "enemy_pos": [
+        2,
+        3
+      ],
+      "passed": true
+    },
+    {
+      "layout_name": "crossfire",
+      "level_id": "L3",
+      "profile_id": "crossfire_thread_v1",
+      "route_name": "win",
+      "commands": "wwaaddddwaaww",
+      "hazard_density": "high",
+      "hazard_count": 4,
+      "starting_hp": 13,
+      "turn_limit": 13,
+      "enemy_turns_per_round": 2,
+      "commands_total": 13,
+      "commands_consumed": 13,
+      "ended_before_commands_finished": false,
+      "expected_status": "win",
+      "actual_status": "win",
+      "status_matches": true,
+      "score": 590,
+      "expected_score_range": {
+        "min": 540,
+        "max": 640
+      },
+      "score_in_expected_range": true,
+      "hp": 1,
+      "turns_left": 0,
+      "player_pos": [
+        2,
+        0
+      ],
+      "enemy_pos": [
+        2,
+        0
+      ],
+      "passed": true
+    },
+    {
+      "layout_name": "crossfire",
+      "level_id": "L3",
+      "profile_id": "crossfire_crash_v1",
+      "route_name": "lose",
+      "commands": "dwwwwwsws",
+      "hazard_density": "high",
+      "hazard_count": 4,
+      "starting_hp": 13,
+      "turn_limit": 13,
+      "enemy_turns_per_round": 2,
+      "commands_total": 9,
+      "commands_consumed": 9,
+      "ended_before_commands_finished": false,
+      "expected_status": "lose",
+      "actual_status": "lose",
+      "status_matches": true,
+      "score": 0,
+      "expected_score_range": {
+        "min": 0,
+        "max": 40
+      },
+      "score_in_expected_range": true,
+      "hp": 0,
+      "turns_left": 4,
+      "player_pos": [
+        3,
+        1
+      ],
+      "enemy_pos": [
+        3,
+        1
+      ],
+      "passed": true
+    }
+  ],
+  "summary_by_layout": {
+    "classic": {
+      "level_id": "L1",
+      "win": {
+        "route_count": 1,
+        "min_score": 1022,
+        "max_score": 1022
+      },
+      "lose": {
+        "route_count": 1,
+        "min_score": 0,
+        "max_score": 0
+      }
+    },
+    "corridor": {
+      "level_id": "L2",
+      "win": {
+        "route_count": 1,
+        "min_score": 777,
+        "max_score": 777
+      },
+      "lose": {
+        "route_count": 1,
+        "min_score": 0,
+        "max_score": 0
+      }
+    },
+    "crossfire": {
+      "level_id": "L3",
+      "win": {
+        "route_count": 1,
+        "min_score": 590,
+        "max_score": 590
+      },
+      "lose": {
+        "route_count": 1,
+        "min_score": 0,
+        "max_score": 0
+      }
+    }
+  }
+}

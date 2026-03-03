@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "profiles": {
+    "L1": {
+      "turn_reward": 12,
+      "energy_cell_reward": 120,
+      "extraction_activation_reward": 160,
+      "hazard_damage_penalty": 24,
+      "enemy_collision_penalty": 36,
+      "level_win_base_reward": 220,
+      "level_win_hp_bonus": 42,
+      "level_win_turn_bonus": 22
+    },
+    "L2": {
+      "turn_reward": 10,
+      "energy_cell_reward": 130,
+      "extraction_activation_reward": 185,
+      "hazard_damage_penalty": 30,
+      "enemy_collision_penalty": 44,
+      "level_win_base_reward": 270,
+      "level_win_hp_bonus": 38,
+      "level_win_turn_bonus": 18
+    },
+    "L3": {
+      "turn_reward": 8,
+      "energy_cell_reward": 145,
+      "extraction_activation_reward": 210,
+      "hazard_damage_penalty": 36,
+      "enemy_collision_penalty": 52,
+      "level_win_base_reward": 320,
+      "level_win_hp_bonus": 34,
+      "level_win_turn_bonus": 15
+    }
+  }
+}

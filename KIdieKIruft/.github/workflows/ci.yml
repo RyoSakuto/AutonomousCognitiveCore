@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  orchestrator-smoke-check:
+    name: Orchestrator Smoke Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run smoke checks
+        run: |
+          ./scripts/check_orchestrator_loop.sh
+          ./scripts/check_orchestrator_rework.sh
+
+  route-balance-report:
+    name: Route Balance Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build route balance report
+        run: |
+          cd spielpaket_vertical_slice
+          python3 scripts/report_route_balance.py --output route_balance_report.json
+          test -s route_balance_report.json
