@@ -39,6 +39,7 @@ MVP++ implementation of an autonomous cognitive loop based on the blueprint.
 - Deep KIdieKIruft sync import (run meta/log excerpts/followups) with optional auto-requeue and rework follow-up generation
 - Service hardening for daemon mode (single-instance lock, structured JSONL logs, optional health endpoint)
 - Extended safety controls (operating modes, worker allow/deny policies, self-mod budget limits, rollback alerting)
+- Goal-to-plan layer: natural-language goal -> task graph with dependencies
 
 ## Project structure
 
@@ -82,6 +83,14 @@ python3 main.py --create-task "Neue Ziele fuer das System brainstormen" --task-s
 python3 main.py --task-funnel-now --task-funnel-batch 3
 python3 main.py --execute-queue-now --task-exec-batch 2
 python3 main.py --list-tasks all
+```
+
+Create a plan from one larger goal:
+
+```bash
+python3 main.py \
+  --plan-goal "Baue eine Verbesserung fuer das semantische Gedaechtnis mit Tests und Dokumentation" \
+  --session-id planner-demo
 ```
 
 Route task execution to a specific worker:

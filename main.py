@@ -81,6 +81,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ask", type=str, default=None, help="Single natural-language request for ACC")
     parser.add_argument("--chat", action="store_true", help="Interactive chat mode with ACC")
     parser.add_argument("--session-id", type=str, default="default", help="Conversation session identifier")
+    parser.add_argument(
+        "--plan-goal",
+        type=str,
+        default=None,
+        help="Create a task plan with dependencies from a natural-language goal",
+    )
+    parser.add_argument(
+        "--plan-default-status",
+        type=str,
+        default="creative",
+        help="Default status for planner-created tasks (idea|creative|queued)",
+    )
+    parser.add_argument(
+        "--plan-base-priority",
+        type=float,
+        default=0.82,
+        help="Base priority used by --plan-goal",
+    )
     parser.add_argument("--disable-task-funnel", action="store_true", help="Disable task funnel automation")
     parser.add_argument("--disable-task-execution", action="store_true", help="Disable queued task execution")
     parser.add_argument(
@@ -372,8 +390,14 @@ def main() -> None:
         if args.chat and args.daemon:
             print("Error: --chat and --daemon cannot be combined.")
             return
+        if args.plan_goal is not None and args.daemon:
+            print("Error: --plan-goal and --daemon cannot be combined.")
+            return
         if args.ask is not None and args.chat:
             print("Error: use either --ask or --chat, not both.")
+            return
+        if args.plan_goal is not None and (args.ask is not None or args.chat):
+            print("Error: --plan-goal cannot be combined with --ask/--chat.")
             return
         if args.approve_task and args.reject_task:
             print("Error: use either --approve-task or --reject-task, not both.")
@@ -396,8 +420,10 @@ def main() -> None:
         if args.sync_kidiekiruft_now and (args.ask is not None or args.chat):
             print("Error: --sync-kidiekiruft-now cannot be combined with --ask/--chat.")
             return
-        if args.list_tasks is not None and (args.ask is not None or args.chat or args.daemon):
-            print("Error: --list-tasks cannot be combined with --ask/--chat/--daemon.")
+        if args.list_tasks is not None and (
+            args.ask is not None or args.chat or args.daemon or args.plan_goal is not None
+        ):
+            print("Error: --list-tasks cannot be combined with --ask/--chat/--daemon/--plan-goal.")
             return
         if args.task_funnel_batch is not None and args.task_funnel_batch < 1:
             print("Error: --task-funnel-batch must be >= 1.")
@@ -437,6 +463,12 @@ def main() -> None:
             and args.self_mod_rollback_alert_threshold < 1
         ):
             print("Error: --self-mod-rollback-alert-threshold must be >= 1.")
+            return
+        if args.plan_default_status.strip().lower() not in {"idea", "creative", "queued"}:
+            print("Error: --plan-default-status must be idea|creative|queued.")
+            return
+        if not 0.0 <= float(args.plan_base_priority) <= 1.0:
+            print("Error: --plan-base-priority must be between 0.0 and 1.0.")
             return
 
         if args.create_task is not None:
@@ -511,6 +543,40 @@ def main() -> None:
                 task_key=task["task_key"] if task else None,
                 status=task["status"] if task else args.task_status,
                 dependency_count=dependency_created,
+            )
+            return
+
+        if args.plan_goal is not None:
+            try:
+                plan = orchestrator.plan_goal_to_tasks(
+                    goal_text=args.plan_goal,
+                    session_id=args.session_id,
+                    default_status=args.plan_default_status,
+                    base_priority=args.plan_base_priority,
+                )
+            except ValueError as exc:
+                print(f"Error: {exc}")
+                return
+            print("ACC goal plan created")
+            print(f"plan_id={plan['plan_id']}")
+            print(f"plan_title={plan['plan_title']}")
+            print(f"task_count={plan['task_count']}")
+            print(f"dependency_count={plan['dependency_count']}")
+            print(f"planner_fallback={str(plan['fallback']).lower()}")
+            print(f"source={plan['source']}")
+            for item in plan["tasks"]:
+                worker = item.get("worker") or "auto"
+                depends = ",".join(str(dep) for dep in item.get("depends_on", [])) or "none"
+                print(
+                    f"{item['task_key']} status={item['status']} worker={worker} "
+                    f"depends_on={depends} title={item['title']}"
+                )
+            logger.emit(
+                "goal_plan_created_via_cli",
+                plan_id=plan["plan_id"],
+                task_count=plan["task_count"],
+                dependency_count=plan["dependency_count"],
+                fallback=plan["fallback"],
             )
             return
 

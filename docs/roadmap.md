@@ -14,6 +14,7 @@
 - Phase 10: Policy-Lernlogik v2 -> umgesetzt (datengetriebene Kandidatenwahl + gekoppelte Parameter-Aenderungen).
 - Phase 11: Service-Haertung v2 -> umgesetzt (Daemon-Lock, strukturierte Logs, Health-Endpoint mit graceful fallback).
 - Phase 12: Erweiterte Safety v1 -> umgesetzt (Self-Mod-Budget, Mode-Policies, Rollback-Alerting).
+- Phase 13: Goal-to-Plan Layer v1 -> umgesetzt (Zieltext -> Task-Graph mit Dependencies).
 
 ## Nächste Ausbaustufen
 

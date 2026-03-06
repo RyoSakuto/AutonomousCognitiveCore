@@ -67,6 +67,18 @@ python3 main.py --daemon --daemon-max-ticks 3 --daemon-interval 0.2 --daemon-cyc
 python3 main.py --create-task "Wir sollten unsere Review-Pipeline robuster machen." --task-status idea --task-priority 0.8
 ```
 
+## Ziel automatisch in Plan zerlegen
+
+```bash
+python3 main.py \
+  --plan-goal "Baue eine Verbesserung fuer das semantische Gedaechtnis mit Tests und Dokumentation" \
+  --session-id planner-demo
+```
+
+Hinweis:
+- ACC erzeugt mehrere Tasks inkl. Dependencies.
+- Standardmaessig startet der erste Task eher in `creative`, Folge-Tasks oft in `queued`.
+
 ## Task mit Dependency + Retry
 
 ```bash

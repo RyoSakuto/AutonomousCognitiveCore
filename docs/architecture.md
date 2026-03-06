@@ -12,6 +12,7 @@ ACC ist ein modularer, zustandsbehafteter Agent mit persistentem Speicher. Ein O
 - `acc/orchestrator.py`
 - Führt den End-to-End-Denkzyklus aus.
 - Nutzt Runtime-Policy (dynamisch anpassbar).
+- Enthaelt jetzt auch eine Goal-to-Plan-Materialisierung (`--plan-goal`) fuer Task-Graph-Erzeugung.
 - Enthält Task-Funnel-Automation (`idea -> creative -> queued`) inkl. optionalem Human-Gate.
 - Enthält Queue-Execution fuer `queued` Tasks (`acc.executor`) inkl. Run/Review/Event-Audit.
 - Routing-Layer fuer mehrere Worker (`acc`, `nimcf`, `kidiekiruft`) mit dynamischem Worker-Scoring (Erfolg/Konfidenz/Fallback/Last).
@@ -43,6 +44,9 @@ ACC ist ein modularer, zustandsbehafteter Agent mit persistentem Speicher. Ein O
 - Single-Instance Lockfile
 - Strukturierte JSONL-Logs
 - Optionaler HTTP-Health-Endpoint (`/health`, `/healthz`)
+
+- `acc/project_planner.py`
+- Wandelt groessere Ziele in einen kleinen Task-Plan mit Dependencies um.
 
 - `acc/memory.py` + `acc/embedding.py`
 - Semantisches Memory mit Similarity-Retrieval.

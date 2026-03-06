@@ -74,6 +74,17 @@ Hinweis:
 6. Ereignisse schreiben mit `add_agent_event(...)`
 7. Task finalisieren mit `update_task_status(..., status='done'|'failed')`
 
+## Goal-to-Plan Layer
+
+ACC kann jetzt ein groesseres Ziel direkt in einen kleinen Task-Graphen zerlegen:
+
+1. CLI: `python3 main.py --plan-goal "..."`
+2. Planner erzeugt 2 bis 5 Tasks mit `status`, `priority`, `depends_on`, optionalem `worker`
+3. Tasks werden normal im Task Core gespeichert
+4. Dependencies werden in `task_dependencies` materialisiert
+
+Damit wird aus einem natuerlichen Ziel erstmals direkt ein ausfuehrbarer Arbeitsplan.
+
 ## Automatischer Funnel
 
 ACC kann jetzt automatisch pro Zyklus:

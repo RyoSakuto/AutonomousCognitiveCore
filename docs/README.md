@@ -16,6 +16,7 @@ Diese Dokumentation beschreibt den aktuellen Implementierungsstand des `Autonomo
 - `configuration.md`: Alle Laufzeitparameter inkl. ENV/CLI
 - `llm-integration.md`: Lokale LLM/Embedding-Anbindung mit Fallback
 - `task-core.md`: Einheitliches Task-Core-Modell (Tasks, Runs, Reviews, Events)
+- Goal-to-Plan ist in `task-core.md`, `architecture.md` und `runbook.md` beschrieben
 - `runbook.md`: Betrieb, Checks, Troubleshooting
 - `validation-and-metrics.md`: KPI und Validierung
 - `roadmap.md`: Nächste Ausbauphasen

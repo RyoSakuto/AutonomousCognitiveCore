@@ -9,6 +9,9 @@
 - `idea -> creative -> queued` ueber LLM-gestuetzte Transitions.
 - Optionales Human-Gate: bei Queue-Reife geht Task auf `blocked` statt direkt `queued`.
 
+Zwischenschritt davor moeglich:
+- Ein externes Ziel kann zuerst in einen Task-Plan zerlegt werden (`--plan-goal`), bevor der normale Funnel/Execution-Lauf startet.
+
 3. Externer Sync (neu)
 - `blocked` Tasks mit KIdieKIruft-Mapping werden gegen externen Review-Status synchronisiert.
 - Mapping: `approved -> done`, `rework -> queued` (Default Auto-Requeue) oder `rework`.

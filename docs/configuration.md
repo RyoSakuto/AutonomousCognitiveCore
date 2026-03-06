@@ -17,6 +17,13 @@
 - `ACC_LLM_TIMEOUT` / `--llm-timeout`
 - `ACC_LLM_API_KEY` / `--llm-api-key`
 
+## Planning
+
+- `--plan-goal`
+- `--plan-default-status`
+- `--plan-base-priority`
+- `--session-id` (auch fuer Planner nutzbar)
+
 ## Trigger und Exploration
 
 - `ACC_UNCERTAINTY_THRESHOLD`

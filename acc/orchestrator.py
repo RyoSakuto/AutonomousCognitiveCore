@@ -19,6 +19,7 @@ from .goal_generator import IntrinsicGoalGenerator
 from .llm import build_llm_client
 from .memory import RetrievedMemory, SemanticMemory
 from .meta_cognition import MetaCognition
+from .project_planner import GoalToPlanPlanner, PlannedGoal
 from .self_modification import RuntimePolicy, SelfModificationManager
 from .state import StateStore
 
@@ -57,6 +58,7 @@ class ACCOrchestrator:
             embedder=self.embedder,
             candidate_window=config.memory_candidate_window,
         )
+        self.project_planner = GoalToPlanPlanner(self.llm)
         self.self_mod = SelfModificationManager(self.state, config)
         self.policy: RuntimePolicy = self.self_mod.bootstrap()
         self._nimcf_booted = False
@@ -2100,6 +2102,117 @@ class ACCOrchestrator:
             score=priority,
         )
         return goal_id
+
+    def plan_goal_to_tasks(
+        self,
+        goal_text: str,
+        session_id: str = "planner",
+        default_status: str = "creative",
+        base_priority: float = 0.82,
+    ) -> dict:
+        cleaned_goal = goal_text.strip()
+        if not cleaned_goal:
+            raise ValueError("Goal text must not be empty.")
+
+        plan: PlannedGoal = self.project_planner.plan_goal(
+            goal_text=cleaned_goal,
+            default_status=default_status,
+            base_priority=base_priority,
+        )
+        cycle = max(1, self.state.next_cycle_number())
+        source = f"acc.planner:{session_id}"
+        plan_hash = hashlib.sha1(f"{session_id}:{cleaned_goal}".encode("utf-8")).hexdigest()[:8]
+        plan_id = f"PLAN-{cycle:05d}-{plan_hash}"
+
+        created: list[dict[str, object]] = []
+        task_ids_by_key: dict[str, int] = {}
+        for item in plan.tasks:
+            description = item.description
+            if item.acceptance_criteria:
+                criteria = "\n".join(f"- {criterion}" for criterion in item.acceptance_criteria)
+                description = f"{description}\nAkzeptanzkriterien:\n{criteria}"
+
+            context: dict[str, object] = {
+                "plan_id": plan_id,
+                "plan_title": plan.plan_title,
+                "goal_text": cleaned_goal,
+                "planner_task_key": item.key,
+                "planner_fallback": plan.fallback,
+                "acceptance_criteria": item.acceptance_criteria,
+                "planning_session_id": session_id,
+            }
+            if item.worker is not None:
+                context["worker"] = item.worker
+
+            task_id = self.state.create_task(
+                title=item.title,
+                description=description,
+                source=source,
+                status=item.status,
+                priority=item.priority,
+                context=context,
+            )
+            task = self.state.get_task(task_id)
+            task_key = task["task_key"] if task is not None else f"TASK-{task_id:05d}"
+            task_ids_by_key[item.key] = task_id
+            created.append(
+                {
+                    "planner_key": item.key,
+                    "task_id": task_id,
+                    "task_key": task_key,
+                    "status": item.status,
+                    "title": item.title,
+                    "worker": item.worker,
+                    "depends_on": list(item.depends_on),
+                }
+            )
+
+        dependency_count = 0
+        for item in plan.tasks:
+            task_id = task_ids_by_key[item.key]
+            for dep_key in item.depends_on:
+                depends_id = task_ids_by_key.get(dep_key)
+                if depends_id is None:
+                    continue
+                self.state.add_task_dependency(
+                    task_id=task_id,
+                    depends_on_task_id=depends_id,
+                    dependency_type="hard",
+                )
+                dependency_count += 1
+
+        self.state.add_agent_event(
+            cycle=cycle,
+            event_type="goal_planned",
+            severity="info",
+            message=f"plan_id={plan_id} tasks={len(created)} source={source}",
+            payload={
+                "plan_id": plan_id,
+                "plan_title": plan.plan_title,
+                "summary": plan.summary,
+                "goal_text": cleaned_goal,
+                "task_count": len(created),
+                "dependency_count": dependency_count,
+                "fallback": plan.fallback,
+            },
+        )
+        self.state.add_episode(
+            cycle=cycle,
+            kind="goal_planned",
+            content=f"plan_id={plan_id} tasks={len(created)} deps={dependency_count}",
+            score=min(1.0, 0.5 + len(created) * 0.08),
+        )
+
+        return {
+            "plan_id": plan_id,
+            "plan_title": plan.plan_title,
+            "summary": plan.summary,
+            "task_count": len(created),
+            "dependency_count": dependency_count,
+            "fallback": plan.fallback,
+            "source": source,
+            "tasks": created,
+        }
 
     def generate_external_response(
         self,
