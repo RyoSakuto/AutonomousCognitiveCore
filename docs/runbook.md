@@ -121,9 +121,38 @@ python3 main.py \
   --llm-provider openai_compatible \
   --llm-endpoint http://192.168.0.56:1234 \
   --llm-model mistralai/ministral-3-14b-reasoning \
+  --llm-planner-model mistralai/ministral-3-14b-reasoning \
+  --llm-reviewer-model openai/gpt-oss-20b \
+  --llm-chat-model openai/gpt-oss-20b \
+  --llm-switch-budget 1 \
   --llm-timeout 180 \
   --plan-goal "Erstelle einen kleinen Plan zur Verbesserung der Doku mit anschliessendem Review"
 ```
+
+Modelle pruefen:
+
+```bash
+python3 main.py \
+  --llm-provider openai_compatible \
+  --llm-endpoint http://192.168.0.56:1234 \
+  --list-llm-models
+```
+
+Optional ein Modell aktiv nachladen:
+
+```bash
+python3 main.py \
+  --llm-provider openai_compatible \
+  --llm-endpoint http://192.168.0.56:1234 \
+  --llm-auto-load \
+  --load-llm-model openai/gpt-oss-20b
+```
+
+Hinweis fuer CPU/RAM-Betrieb:
+
+- Bereits geladene Modelle werden standardmaessig bevorzugt.
+- `--llm-auto-load` nur aktivieren, wenn ACC wirklich selbst umschalten soll.
+- `--llm-switch-budget 1` verhindert staendiges Nachladen bei langsamen Modellen.
 
 ## KIdieKIruft live dispatch (optional)
 

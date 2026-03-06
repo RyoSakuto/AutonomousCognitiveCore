@@ -65,6 +65,27 @@ MVP++ implementation of an autonomous cognitive loop based on the blueprint.
 python3 main.py --cycles 12
 ```
 
+## Configuration files
+
+ACC now reads configuration in this order:
+
+1. internal defaults
+2. INI files (`config/acc.ini`, `config/acc.local.ini`, or `--config <path>`)
+3. environment variables (`ACC_*`)
+4. CLI arguments
+
+Safe repo setup:
+
+- tracked template: `config/acc.example.ini`
+- private local overrides: `config/acc.ini` or `config/acc.local.ini`
+- both private files are ignored via `.gitignore`
+
+Quick start:
+
+```bash
+cp config/acc.example.ini config/acc.local.ini
+```
+
 ## Clean workspace for a fresh start
 
 ```bash
@@ -198,10 +219,31 @@ python3 main.py --cycles 12 \
   --llm-provider openai_compatible \
   --llm-endpoint http://192.168.0.56:1234 \
   --llm-timeout 90 \
+  --llm-planner-model mistralai/ministral-3-14b-reasoning \
+  --llm-reviewer-model openai/gpt-oss-20b \
+  --llm-chat-model openai/gpt-oss-20b \
+  --llm-switch-budget 1 \
   --llm-model mistralai/ministral-3-14b-reasoning
 ```
 
 For slower local reasoning models, `--llm-timeout 120` to `180` is recommended.
+
+To inspect which models are already loaded:
+
+```bash
+python3 main.py \
+  --llm-provider openai_compatible \
+  --llm-endpoint http://192.168.0.56:1234 \
+  --list-llm-models
+```
+
+ACC now supports simple role-based local routing:
+
+- `planner` / `llm_planner` -> preferred planning model
+- `reviewer` / `llm_reviewer` -> preferred review model
+- `chat` -> preferred answer model
+
+By default ACC prefers models that are already loaded in RAM. This is useful when the server runs on CPU and VRAM is limited.
 
 If your server requires a key:
 

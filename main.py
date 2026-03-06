@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import time
 from datetime import datetime, timezone
 
@@ -13,6 +14,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cycles", type=int, default=None, help="Number of autonomous cycles")
     parser.add_argument("--db-path", type=str, default=None, help="SQLite database path")
     parser.add_argument(
+        "--config",
+        action="append",
+        default=None,
+        help="INI config path; can be used multiple times (later files override earlier ones)",
+    )
+    parser.add_argument(
         "--llm-provider",
         type=str,
         default=None,
@@ -22,6 +29,62 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--llm-endpoint", type=str, default=None, help="Local LLM HTTP endpoint")
     parser.add_argument("--llm-timeout", type=float, default=None, help="LLM request timeout in seconds")
     parser.add_argument("--llm-api-key", type=str, default=None, help="Optional API key for LLM endpoint")
+    parser.add_argument(
+        "--llm-auto-discover",
+        action="store_true",
+        help="Discover loaded/available local models before ACC routes a task",
+    )
+    parser.add_argument(
+        "--llm-auto-load",
+        action="store_true",
+        help="Allow ACC to load a missing model before use",
+    )
+    parser.add_argument(
+        "--llm-no-prefer-loaded",
+        action="store_true",
+        help="Do not prefer already loaded models in RAM",
+    )
+    parser.add_argument(
+        "--llm-load-timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait until a requested model is confirmed as loaded",
+    )
+    parser.add_argument(
+        "--llm-switch-budget",
+        type=int,
+        default=None,
+        help="Maximum model switches per run (-1 = unlimited)",
+    )
+    parser.add_argument(
+        "--llm-planner-model",
+        type=str,
+        default=None,
+        help="Preferred model for planning and decomposition",
+    )
+    parser.add_argument(
+        "--llm-reviewer-model",
+        type=str,
+        default=None,
+        help="Preferred model for review and gate checks",
+    )
+    parser.add_argument(
+        "--llm-chat-model",
+        type=str,
+        default=None,
+        help="Preferred model for natural-language answers",
+    )
+    parser.add_argument(
+        "--list-llm-models",
+        action="store_true",
+        help="List discovered loaded/available models and exit",
+    )
+    parser.add_argument(
+        "--load-llm-model",
+        type=str,
+        default=None,
+        help="Load a specific model through the local LLM server and exit",
+    )
     parser.add_argument(
         "--operating-mode",
         type=str,
@@ -220,7 +283,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    config = ACCConfig.from_env()
+    config_paths = args.config if args.config else None
+    config = ACCConfig.from_sources(config_paths=config_paths)
 
     if args.db_path:
         config = ACCConfig(**{**config.__dict__, "db_path": args.db_path})
@@ -234,6 +298,22 @@ def main() -> None:
         config = ACCConfig(**{**config.__dict__, "llm_timeout_sec": args.llm_timeout})
     if args.llm_api_key is not None:
         config = ACCConfig(**{**config.__dict__, "llm_api_key": args.llm_api_key})
+    if args.llm_auto_discover:
+        config = ACCConfig(**{**config.__dict__, "llm_auto_discover": True})
+    if args.llm_auto_load:
+        config = ACCConfig(**{**config.__dict__, "llm_auto_load": True})
+    if args.llm_no_prefer_loaded:
+        config = ACCConfig(**{**config.__dict__, "llm_prefer_loaded": False})
+    if args.llm_load_timeout is not None:
+        config = ACCConfig(**{**config.__dict__, "llm_load_timeout_sec": args.llm_load_timeout})
+    if args.llm_switch_budget is not None:
+        config = ACCConfig(**{**config.__dict__, "llm_switch_budget": args.llm_switch_budget})
+    if args.llm_planner_model is not None:
+        config = ACCConfig(**{**config.__dict__, "llm_planner_model": args.llm_planner_model})
+    if args.llm_reviewer_model is not None:
+        config = ACCConfig(**{**config.__dict__, "llm_reviewer_model": args.llm_reviewer_model})
+    if args.llm_chat_model is not None:
+        config = ACCConfig(**{**config.__dict__, "llm_chat_model": args.llm_chat_model})
     if args.operating_mode is not None:
         config = ACCConfig(**{**config.__dict__, "operating_mode": args.operating_mode})
     if args.embedding_provider:
@@ -425,6 +505,16 @@ def main() -> None:
         ):
             print("Error: --list-tasks cannot be combined with --ask/--chat/--daemon/--plan-goal.")
             return
+        if args.list_llm_models and (
+            args.ask is not None or args.chat or args.daemon or args.plan_goal is not None
+        ):
+            print("Error: --list-llm-models cannot be combined with --ask/--chat/--daemon/--plan-goal.")
+            return
+        if args.load_llm_model is not None and (
+            args.ask is not None or args.chat or args.daemon or args.plan_goal is not None
+        ):
+            print("Error: --load-llm-model cannot be combined with --ask/--chat/--daemon/--plan-goal.")
+            return
         if args.task_funnel_batch is not None and args.task_funnel_batch < 1:
             print("Error: --task-funnel-batch must be >= 1.")
             return
@@ -445,6 +535,12 @@ def main() -> None:
             return
         if args.health_port is not None and args.health_port < 1:
             print("Error: --health-port must be >= 1.")
+            return
+        if args.llm_load_timeout is not None and args.llm_load_timeout <= 0:
+            print("Error: --llm-load-timeout must be > 0.")
+            return
+        if args.llm_switch_budget is not None and args.llm_switch_budget < -1:
+            print("Error: --llm-switch-budget must be >= -1.")
             return
         if config.operating_mode.strip().lower() not in {"discovery", "balanced", "guarded", "production"}:
             print("Error: --operating-mode must be discovery|balanced|guarded|production.")
@@ -590,6 +686,44 @@ def main() -> None:
                     f"{task['task_key']} id={task['id']} status={task['status']} "
                     f"priority={float(task['priority']):.2f} title={task['title']}"
                 )
+            return
+
+        if args.list_llm_models:
+            info = orchestrator.llm.list_models()
+            print("ACC llm models")
+            print(f"provider={info.get('provider', 'unknown')}")
+            print(f"active_model={info.get('active_model') or '-'}")
+            print(f"supports_discovery={bool(info.get('supports_discovery'))}")
+            print(f"supports_loading={bool(info.get('supports_loading'))}")
+            print(f"switches_made={info.get('switches_made', 0)}")
+            print(f"switch_budget={info.get('switch_budget', 0)}")
+            role_models = info.get("role_models") or {}
+            print(f"role_models={json.dumps(role_models, ensure_ascii=False, sort_keys=True)}")
+            print("loaded_models:")
+            loaded_models = info.get("loaded_models") or []
+            if loaded_models:
+                for name in loaded_models:
+                    print(f"- {name}")
+            else:
+                print("- none")
+            print("available_models:")
+            available_models = info.get("available_models") or []
+            if available_models:
+                for name in available_models:
+                    print(f"- {name}")
+            else:
+                print("- none")
+            errors = info.get("errors") or {}
+            if errors:
+                print(f"discovery_errors={json.dumps(errors, ensure_ascii=False, sort_keys=True)}")
+            return
+
+        if args.load_llm_model is not None:
+            result = orchestrator.llm.load_model(args.load_llm_model)
+            print("ACC llm load complete")
+            print(f"ok={bool(result.get('ok'))}")
+            print(f"model={result.get('model')}")
+            print(f"message={result.get('message', '')}")
             return
 
         if args.approve_task is not None:

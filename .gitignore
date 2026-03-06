@@ -31,3 +31,7 @@ KIdieKIruft/dist/
 KIdieKIruft/archive/
 nimcf/archive/
 nimcf/outbox/
+
+# Local ACC config overrides
+config/acc.ini
+config/acc.local.ini

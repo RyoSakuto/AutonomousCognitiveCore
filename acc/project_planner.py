@@ -174,7 +174,7 @@ class GoalToPlanPlanner:
             f"base_priority={clamped_priority:.2f}\n"
             f"goal={goal_text.strip()}"
         )
-        raw = self.llm.generate(prompt)
+        raw = self.llm.generate(prompt, role="planner")
         data = self._extract_json_object(raw)
         fallback = self._is_fallback_text(raw) or data is None
         if data is None:

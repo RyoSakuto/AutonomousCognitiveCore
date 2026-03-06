@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import configparser
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -20,6 +22,14 @@ class ACCConfig:
     llm_endpoint: str = "http://localhost:11434/api/generate"
     llm_timeout_sec: float = 20.0
     llm_api_key: str = ""
+    llm_auto_discover: bool = True
+    llm_auto_load: bool = False
+    llm_prefer_loaded: bool = True
+    llm_load_timeout_sec: float = 120.0
+    llm_switch_budget: int = 1
+    llm_planner_model: str = ""
+    llm_reviewer_model: str = ""
+    llm_chat_model: str = ""
 
     embedding_provider: str = "hash"
     embedding_model: str = "nomic-embed-text"
@@ -76,140 +86,144 @@ class ACCConfig:
         return value.strip().lower() in {"1", "true", "yes", "on"}
 
     @classmethod
-    def from_env(cls) -> "ACCConfig":
-        def _get(name: str, default: str) -> str:
-            return os.getenv(name, default)
+    def _field_defaults(cls) -> dict[str, object]:
+        return {item.name: item.default for item in fields(cls)}
 
-        return cls(
-            db_path=_get("ACC_DB_PATH", cls.db_path),
-            max_cycles=int(_get("ACC_MAX_CYCLES", str(cls.max_cycles))),
-            tick_interval_sec=float(_get("ACC_TICK_INTERVAL", str(cls.tick_interval_sec))),
-            uncertainty_threshold=float(_get("ACC_UNCERTAINTY_THRESHOLD", str(cls.uncertainty_threshold))),
-            conflict_threshold=float(_get("ACC_CONFLICT_THRESHOLD", str(cls.conflict_threshold))),
-            novelty_threshold=float(_get("ACC_NOVELTY_THRESHOLD", str(cls.novelty_threshold))),
-            exploration_factor=float(_get("ACC_EXPLORATION_FACTOR", str(cls.exploration_factor))),
-            llm_provider=_get("ACC_LLM_PROVIDER", cls.llm_provider),
-            llm_model=_get("ACC_LLM_MODEL", cls.llm_model),
-            llm_endpoint=_get("ACC_LLM_ENDPOINT", cls.llm_endpoint),
-            llm_timeout_sec=float(_get("ACC_LLM_TIMEOUT", str(cls.llm_timeout_sec))),
-            llm_api_key=_get("ACC_LLM_API_KEY", cls.llm_api_key),
-            embedding_provider=_get("ACC_EMBEDDING_PROVIDER", cls.embedding_provider),
-            embedding_model=_get("ACC_EMBEDDING_MODEL", cls.embedding_model),
-            embedding_endpoint=_get("ACC_EMBEDDING_ENDPOINT", cls.embedding_endpoint),
-            embedding_dimensions=int(_get("ACC_EMBEDDING_DIMENSIONS", str(cls.embedding_dimensions))),
-            memory_retrieval_k=int(_get("ACC_MEMORY_RETRIEVAL_K", str(cls.memory_retrieval_k))),
-            memory_candidate_window=int(
-                _get("ACC_MEMORY_CANDIDATE_WINDOW", str(cls.memory_candidate_window))
-            ),
-            memory_min_score=float(_get("ACC_MEMORY_MIN_SCORE", str(cls.memory_min_score))),
-            self_mod_enabled=cls._parse_bool(_get("ACC_SELF_MOD_ENABLED", str(cls.self_mod_enabled))),
-            self_mod_min_cycles_between_changes=int(
-                _get(
-                    "ACC_SELF_MOD_MIN_CYCLES_BETWEEN_CHANGES",
-                    str(cls.self_mod_min_cycles_between_changes),
-                )
-            ),
-            self_mod_rollback_window=int(
-                _get("ACC_SELF_MOD_ROLLBACK_WINDOW", str(cls.self_mod_rollback_window))
-            ),
-            self_mod_regression_margin=float(
-                _get("ACC_SELF_MOD_REGRESSION_MARGIN", str(cls.self_mod_regression_margin))
-            ),
-            self_mod_budget_window_cycles=int(
-                _get("ACC_SELF_MOD_BUDGET_WINDOW_CYCLES", str(cls.self_mod_budget_window_cycles))
-            ),
-            self_mod_max_approved_per_window=int(
-                _get(
-                    "ACC_SELF_MOD_MAX_APPROVED_PER_WINDOW",
-                    str(cls.self_mod_max_approved_per_window),
-                )
-            ),
-            self_mod_allow_params=_get("ACC_SELF_MOD_ALLOW_PARAMS", cls.self_mod_allow_params),
-            self_mod_deny_params=_get("ACC_SELF_MOD_DENY_PARAMS", cls.self_mod_deny_params),
-            self_mod_rollback_alert_window=int(
-                _get(
-                    "ACC_SELF_MOD_ROLLBACK_ALERT_WINDOW",
-                    str(cls.self_mod_rollback_alert_window),
-                )
-            ),
-            self_mod_rollback_alert_threshold=int(
-                _get(
-                    "ACC_SELF_MOD_ROLLBACK_ALERT_THRESHOLD",
-                    str(cls.self_mod_rollback_alert_threshold),
-                )
-            ),
-            daemon_interval_sec=float(_get("ACC_DAEMON_INTERVAL_SEC", str(cls.daemon_interval_sec))),
-            daemon_cycles_per_tick=int(
-                _get("ACC_DAEMON_CYCLES_PER_TICK", str(cls.daemon_cycles_per_tick))
-            ),
-            operating_mode=_get("ACC_OPERATING_MODE", cls.operating_mode),
-            worker_allowlist=_get("ACC_WORKER_ALLOWLIST", cls.worker_allowlist),
-            worker_denylist=_get("ACC_WORKER_DENYLIST", cls.worker_denylist),
-            task_funnel_enabled=cls._parse_bool(
-                _get("ACC_TASK_FUNNEL_ENABLED", str(cls.task_funnel_enabled))
-            ),
-            task_funnel_batch_size=int(
-                _get("ACC_TASK_FUNNEL_BATCH_SIZE", str(cls.task_funnel_batch_size))
-            ),
-            task_human_feedback_gate=cls._parse_bool(
-                _get("ACC_TASK_HUMAN_FEEDBACK_GATE", str(cls.task_human_feedback_gate))
-            ),
-            task_execution_enabled=cls._parse_bool(
-                _get("ACC_TASK_EXECUTION_ENABLED", str(cls.task_execution_enabled))
-            ),
-            task_execution_batch_size=int(
-                _get("ACC_TASK_EXECUTION_BATCH_SIZE", str(cls.task_execution_batch_size))
-            ),
-            task_dependency_enforcement=cls._parse_bool(
-                _get(
-                    "ACC_TASK_DEPENDENCY_ENFORCEMENT",
-                    str(cls.task_dependency_enforcement),
-                )
-            ),
-            task_retry_default_max_retries=int(
-                _get(
-                    "ACC_TASK_RETRY_DEFAULT_MAX_RETRIES",
-                    str(cls.task_retry_default_max_retries),
-                )
-            ),
-            task_retry_default_backoff_sec=int(
-                _get(
-                    "ACC_TASK_RETRY_DEFAULT_BACKOFF_SEC",
-                    str(cls.task_retry_default_backoff_sec),
-                )
-            ),
-            task_external_rework_auto_requeue=cls._parse_bool(
-                _get(
-                    "ACC_TASK_EXTERNAL_REWORK_AUTO_REQUEUE",
-                    str(cls.task_external_rework_auto_requeue),
-                )
-            ),
-            worker_stats_window_runs=int(
-                _get("ACC_WORKER_STATS_WINDOW_RUNS", str(cls.worker_stats_window_runs))
-            ),
-            kidiekiruft_root=_get("ACC_KIDIEKIRUFT_ROOT", cls.kidiekiruft_root),
-            kidiekiruft_live_dispatch_enabled=cls._parse_bool(
-                _get(
-                    "ACC_KIDIEKIRUFT_LIVE_DISPATCH_ENABLED",
-                    str(cls.kidiekiruft_live_dispatch_enabled),
-                )
-            ),
-            kidiekiruft_worker_cmd=_get("ACC_KIDIEKIRUFT_WORKER_CMD", cls.kidiekiruft_worker_cmd),
-            kidiekiruft_worker_bin=_get("ACC_KIDIEKIRUFT_WORKER_BIN", cls.kidiekiruft_worker_bin),
-            kidiekiruft_worker_timeout_sec=int(
-                _get(
-                    "ACC_KIDIEKIRUFT_WORKER_TIMEOUT_SEC",
-                    str(cls.kidiekiruft_worker_timeout_sec),
-                )
-            ),
-            service_lock_path=_get("ACC_SERVICE_LOCK_PATH", cls.service_lock_path),
-            structured_logging_enabled=cls._parse_bool(
-                _get("ACC_STRUCTURED_LOGGING_ENABLED", str(cls.structured_logging_enabled))
-            ),
-            structured_log_path=_get("ACC_STRUCTURED_LOG_PATH", cls.structured_log_path),
-            health_server_enabled=cls._parse_bool(
-                _get("ACC_HEALTH_SERVER_ENABLED", str(cls.health_server_enabled))
-            ),
-            health_server_host=_get("ACC_HEALTH_SERVER_HOST", cls.health_server_host),
-            health_server_port=int(_get("ACC_HEALTH_SERVER_PORT", str(cls.health_server_port))),
-        )
+    @classmethod
+    def _convert_value(cls, key: str, raw: object, default: object) -> object:
+        if isinstance(raw, str):
+            value = raw.strip()
+        else:
+            value = raw
+
+        if isinstance(default, bool):
+            return cls._parse_bool(str(value))
+        if isinstance(default, int) and not isinstance(default, bool):
+            return int(str(value))
+        if isinstance(default, float):
+            return float(str(value))
+        return str(value)
+
+    @classmethod
+    def _overlay(cls, base: dict[str, object], values: dict[str, object]) -> dict[str, object]:
+        merged = dict(base)
+        defaults = cls._field_defaults()
+        for key, raw in values.items():
+            if key not in defaults or raw is None:
+                continue
+            merged[key] = cls._convert_value(key, raw, defaults[key])
+        return merged
+
+    @classmethod
+    def from_ini_paths(cls, paths: list[str] | None = None) -> "ACCConfig":
+        defaults = cls._field_defaults()
+        parser = configparser.ConfigParser()
+        parser.optionxform = str
+
+        resolved_paths: list[str] = []
+        for raw_path in paths or []:
+            candidate = Path(raw_path)
+            if candidate.exists() and candidate.is_file():
+                resolved_paths.append(str(candidate))
+
+        if not resolved_paths:
+            return cls(**defaults)
+
+        parser.read(resolved_paths, encoding="utf-8")
+
+        merged = dict(defaults)
+        if parser.has_section("acc"):
+            merged = cls._overlay(merged, dict(parser.items("acc")))
+        return cls(**merged)
+
+    @classmethod
+    def default_ini_paths(cls) -> list[str]:
+        return ["config/acc.ini", "config/acc.local.ini"]
+
+    @classmethod
+    def from_env(cls) -> "ACCConfig":
+        defaults = cls._field_defaults()
+        return cls(**cls._overlay(defaults, cls._env_overrides(defaults)))
+
+    @classmethod
+    def _env_overrides(cls, defaults: dict[str, object] | None = None) -> dict[str, object]:
+        base_defaults = defaults or cls._field_defaults()
+        env_map = {
+            "db_path": "ACC_DB_PATH",
+            "max_cycles": "ACC_MAX_CYCLES",
+            "tick_interval_sec": "ACC_TICK_INTERVAL",
+            "uncertainty_threshold": "ACC_UNCERTAINTY_THRESHOLD",
+            "conflict_threshold": "ACC_CONFLICT_THRESHOLD",
+            "novelty_threshold": "ACC_NOVELTY_THRESHOLD",
+            "exploration_factor": "ACC_EXPLORATION_FACTOR",
+            "llm_provider": "ACC_LLM_PROVIDER",
+            "llm_model": "ACC_LLM_MODEL",
+            "llm_endpoint": "ACC_LLM_ENDPOINT",
+            "llm_timeout_sec": "ACC_LLM_TIMEOUT",
+            "llm_api_key": "ACC_LLM_API_KEY",
+            "llm_auto_discover": "ACC_LLM_AUTO_DISCOVER",
+            "llm_auto_load": "ACC_LLM_AUTO_LOAD",
+            "llm_prefer_loaded": "ACC_LLM_PREFER_LOADED",
+            "llm_load_timeout_sec": "ACC_LLM_LOAD_TIMEOUT",
+            "llm_switch_budget": "ACC_LLM_SWITCH_BUDGET",
+            "llm_planner_model": "ACC_LLM_PLANNER_MODEL",
+            "llm_reviewer_model": "ACC_LLM_REVIEWER_MODEL",
+            "llm_chat_model": "ACC_LLM_CHAT_MODEL",
+            "embedding_provider": "ACC_EMBEDDING_PROVIDER",
+            "embedding_model": "ACC_EMBEDDING_MODEL",
+            "embedding_endpoint": "ACC_EMBEDDING_ENDPOINT",
+            "embedding_dimensions": "ACC_EMBEDDING_DIMENSIONS",
+            "memory_retrieval_k": "ACC_MEMORY_RETRIEVAL_K",
+            "memory_candidate_window": "ACC_MEMORY_CANDIDATE_WINDOW",
+            "memory_min_score": "ACC_MEMORY_MIN_SCORE",
+            "self_mod_enabled": "ACC_SELF_MOD_ENABLED",
+            "self_mod_min_cycles_between_changes": "ACC_SELF_MOD_MIN_CYCLES_BETWEEN_CHANGES",
+            "self_mod_rollback_window": "ACC_SELF_MOD_ROLLBACK_WINDOW",
+            "self_mod_regression_margin": "ACC_SELF_MOD_REGRESSION_MARGIN",
+            "self_mod_budget_window_cycles": "ACC_SELF_MOD_BUDGET_WINDOW_CYCLES",
+            "self_mod_max_approved_per_window": "ACC_SELF_MOD_MAX_APPROVED_PER_WINDOW",
+            "self_mod_allow_params": "ACC_SELF_MOD_ALLOW_PARAMS",
+            "self_mod_deny_params": "ACC_SELF_MOD_DENY_PARAMS",
+            "self_mod_rollback_alert_window": "ACC_SELF_MOD_ROLLBACK_ALERT_WINDOW",
+            "self_mod_rollback_alert_threshold": "ACC_SELF_MOD_ROLLBACK_ALERT_THRESHOLD",
+            "daemon_interval_sec": "ACC_DAEMON_INTERVAL_SEC",
+            "daemon_cycles_per_tick": "ACC_DAEMON_CYCLES_PER_TICK",
+            "operating_mode": "ACC_OPERATING_MODE",
+            "worker_allowlist": "ACC_WORKER_ALLOWLIST",
+            "worker_denylist": "ACC_WORKER_DENYLIST",
+            "task_funnel_enabled": "ACC_TASK_FUNNEL_ENABLED",
+            "task_funnel_batch_size": "ACC_TASK_FUNNEL_BATCH_SIZE",
+            "task_human_feedback_gate": "ACC_TASK_HUMAN_FEEDBACK_GATE",
+            "task_execution_enabled": "ACC_TASK_EXECUTION_ENABLED",
+            "task_execution_batch_size": "ACC_TASK_EXECUTION_BATCH_SIZE",
+            "task_dependency_enforcement": "ACC_TASK_DEPENDENCY_ENFORCEMENT",
+            "task_retry_default_max_retries": "ACC_TASK_RETRY_DEFAULT_MAX_RETRIES",
+            "task_retry_default_backoff_sec": "ACC_TASK_RETRY_DEFAULT_BACKOFF_SEC",
+            "task_external_rework_auto_requeue": "ACC_TASK_EXTERNAL_REWORK_AUTO_REQUEUE",
+            "worker_stats_window_runs": "ACC_WORKER_STATS_WINDOW_RUNS",
+            "kidiekiruft_root": "ACC_KIDIEKIRUFT_ROOT",
+            "kidiekiruft_live_dispatch_enabled": "ACC_KIDIEKIRUFT_LIVE_DISPATCH_ENABLED",
+            "kidiekiruft_worker_cmd": "ACC_KIDIEKIRUFT_WORKER_CMD",
+            "kidiekiruft_worker_bin": "ACC_KIDIEKIRUFT_WORKER_BIN",
+            "kidiekiruft_worker_timeout_sec": "ACC_KIDIEKIRUFT_WORKER_TIMEOUT_SEC",
+            "service_lock_path": "ACC_SERVICE_LOCK_PATH",
+            "structured_logging_enabled": "ACC_STRUCTURED_LOGGING_ENABLED",
+            "structured_log_path": "ACC_STRUCTURED_LOG_PATH",
+            "health_server_enabled": "ACC_HEALTH_SERVER_ENABLED",
+            "health_server_host": "ACC_HEALTH_SERVER_HOST",
+            "health_server_port": "ACC_HEALTH_SERVER_PORT",
+        }
+
+        overrides: dict[str, object] = {}
+        for key, env_name in env_map.items():
+            raw = os.getenv(env_name)
+            if raw is None:
+                continue
+            overrides[key] = cls._convert_value(key, raw, base_defaults[key])
+        return overrides
+
+    @classmethod
+    def from_sources(cls, config_paths: list[str] | None = None) -> "ACCConfig":
+        base = cls.from_ini_paths(config_paths or cls.default_ini_paths())
+        merged = cls._overlay(base.__dict__, cls._env_overrides(cls._field_defaults()))
+        return cls(**merged)

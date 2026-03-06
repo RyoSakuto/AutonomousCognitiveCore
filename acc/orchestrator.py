@@ -221,7 +221,7 @@ class ACCOrchestrator:
             "requires_rework, rationale.\n"
             f"feedback={text}"
         )
-        raw = self.llm.generate(prompt)
+        raw = self.llm.generate(prompt, role="reviewer")
         data = self._extract_json_object(raw)
         fallback = self._is_fallback_text(raw) or data is None
 
@@ -281,7 +281,7 @@ class ACCOrchestrator:
             f"Task-Description: {task['description']}\n"
             f"Human-Feedback: {feedback.strip()}"
         )
-        raw = self.llm.generate(prompt)
+        raw = self.llm.generate(prompt, role="planner")
         data = self._extract_json_object(raw)
         fallback = self._is_fallback_text(raw) or data is None
 
@@ -1229,7 +1229,7 @@ class ACCOrchestrator:
             f"description={description}\n"
             "Keep it realistic and concise."
         )
-        raw = self.llm.generate(prompt)
+        raw = self.llm.generate(prompt, role="planner", task_context=context)
         data = self._extract_json_object(raw)
         fallback = self._is_fallback_text(raw) or data is None
 
@@ -1364,7 +1364,7 @@ class ACCOrchestrator:
             f"title={task['title']}\n"
             f"description={description}"
         )
-        raw = self.llm.generate(prompt)
+        raw = self.llm.generate(prompt, role="reviewer", task_context=context)
         data = self._extract_json_object(raw)
         fallback = self._is_fallback_text(raw) or data is None
 
@@ -1968,7 +1968,7 @@ class ACCOrchestrator:
                     f"title={task['title']}\n"
                     f"description={task['description']}"
                 )
-                raw = self.llm.generate(prompt)
+                raw = self.llm.generate(prompt, role="planner")
                 data = self._extract_json_object(raw)
                 fallback = self._is_fallback_text(raw) or data is None
 
@@ -2076,7 +2076,7 @@ class ACCOrchestrator:
                     f"title={task['title']}\n"
                     f"description={task['description']}"
                 )
-                raw = self.llm.generate(prompt)
+                raw = self.llm.generate(prompt, role="reviewer")
                 data = self._extract_json_object(raw)
                 fallback = self._is_fallback_text(raw) or data is None
 
@@ -2440,7 +2440,7 @@ class ACCOrchestrator:
                 f"Kontext (letzte Dialogturns):\n{chr(10).join(hist_lines) if hist_lines else '- none'}\n"
                 "Gib eine klare Antwort mit kurzer Empfehlung und kurzem Confidence-Hinweis."
             )
-            response = self.llm.generate(response_prompt)
+            response = self.llm.generate(response_prompt, role="chat")
             if response.startswith("Heuristic proposal:") or "Fallback:" in response:
                 response = self._deterministic_external_response(
                     user_text=user_text,
@@ -2550,7 +2550,7 @@ class ACCOrchestrator:
                     )
 
                 prompt = self._build_prompt(goal, snapshot, self_model, memories)
-                hypothesis = self.llm.generate(prompt)
+                hypothesis = self.llm.generate(prompt, role="reasoning")
 
                 evaluation = self.meta.evaluate(snapshot, float(goal["priority"]))
                 weaknesses = ",".join(evaluation.weaknesses)

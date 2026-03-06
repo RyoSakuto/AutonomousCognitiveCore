@@ -3,12 +3,30 @@
 ## Priorität
 
 1. Defaults in `ACCConfig`
-2. ENV (`ACC_*`)
-3. CLI-Argumente
+2. INI-Dateien (`config/acc.ini`, `config/acc.local.ini` oder `--config`)
+3. ENV (`ACC_*`)
+4. CLI-Argumente
+
+## INI-Dateien
+
+- Repo-Vorlage: `config/acc.example.ini`
+- Lokale private Dateien: `config/acc.ini` oder `config/acc.local.ini`
+- Beide lokalen Dateien sind per `.gitignore` ausgeschlossen.
+- Eigene Pfade koennen per `--config <pfad>` eingebunden werden.
+- Wenn `--config` mehrfach gesetzt wird, ueberschreibt spaeteres frueheres.
+
+Empfohlener Flow:
+
+```bash
+cp config/acc.example.ini config/acc.local.ini
+```
+
+Danach nur `config/acc.local.ini` fuer die eigene Maschine anpassen.
 
 ## Kernparameter
 
 - `ACC_DB_PATH` / `--db-path`
+- `--config <pfad>`
 - `ACC_MAX_CYCLES` / `--cycles`
 - `ACC_TICK_INTERVAL`
 - `ACC_LLM_PROVIDER` / `--llm-provider`
@@ -16,6 +34,16 @@
 - `ACC_LLM_ENDPOINT` / `--llm-endpoint`
 - `ACC_LLM_TIMEOUT` / `--llm-timeout`
 - `ACC_LLM_API_KEY` / `--llm-api-key`
+- `ACC_LLM_AUTO_DISCOVER` / `--llm-auto-discover`
+- `ACC_LLM_AUTO_LOAD` / `--llm-auto-load`
+- `ACC_LLM_PREFER_LOADED` / `--llm-no-prefer-loaded`
+- `ACC_LLM_LOAD_TIMEOUT` / `--llm-load-timeout`
+- `ACC_LLM_SWITCH_BUDGET` / `--llm-switch-budget`
+- `ACC_LLM_PLANNER_MODEL` / `--llm-planner-model`
+- `ACC_LLM_REVIEWER_MODEL` / `--llm-reviewer-model`
+- `ACC_LLM_CHAT_MODEL` / `--llm-chat-model`
+- `--list-llm-models`
+- `--load-llm-model <name>`
 
 ## Planning
 
@@ -109,4 +137,17 @@ ACC_LLM_PROVIDER=ollama \
 ACC_EMBEDDING_PROVIDER=ollama \
 ACC_DAEMON_CYCLES_PER_TICK=3 \
 python3 main.py --daemon --daemon-interval 2
+```
+
+```bash
+ACC_LLM_PROVIDER=openai_compatible \
+ACC_LLM_ENDPOINT=http://192.168.0.56:1234 \
+ACC_LLM_MODEL=mistralai/ministral-3-14b-reasoning \
+ACC_LLM_PLANNER_MODEL=mistralai/ministral-3-14b-reasoning \
+ACC_LLM_REVIEWER_MODEL=openai/gpt-oss-20b \
+ACC_LLM_CHAT_MODEL=openai/gpt-oss-20b \
+ACC_LLM_AUTO_DISCOVER=true \
+ACC_LLM_AUTO_LOAD=false \
+ACC_LLM_SWITCH_BUDGET=1 \
+python3 main.py --ask "Erstelle mir einen kleinen Plan und erklaere ihn kurz."
 ```
