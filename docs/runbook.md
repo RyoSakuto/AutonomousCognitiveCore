@@ -108,8 +108,21 @@ python3 main.py --execute-queue-now --task-exec-batch 2
 
 ```bash
 python3 main.py --create-task "Kontextanalyse ueber NIMCF" --task-status queued --task-worker nimcf
+python3 main.py --create-task "Plane kleine Umsetzungspakete" --task-status queued --task-worker llm_planner
+python3 main.py --create-task "Reviewe ein Zwischenergebnis" --task-status queued --task-worker llm_reviewer
 python3 main.py --create-task "Delegations-Vorbereitung" --task-status queued --task-worker kidiekiruft
 python3 main.py --execute-queue-now --task-exec-batch 4
+```
+
+## LM Studio / lokales LLM (empfohlen bei langsamen Modellen)
+
+```bash
+python3 main.py \
+  --llm-provider openai_compatible \
+  --llm-endpoint http://192.168.0.56:1234 \
+  --llm-model mistralai/ministral-3-14b-reasoning \
+  --llm-timeout 180 \
+  --plan-goal "Erstelle einen kleinen Plan zur Verbesserung der Doku mit anschliessendem Review"
 ```
 
 ## KIdieKIruft live dispatch (optional)

@@ -36,10 +36,10 @@ class RunSummary:
 
 class ACCOrchestrator:
     MODE_WORKER_BASELINE = {
-        "discovery": {"acc", "nimcf", "kidiekiruft"},
-        "balanced": {"acc", "nimcf", "kidiekiruft"},
-        "guarded": {"acc", "nimcf"},
-        "production": {"acc"},
+        "discovery": {"acc", "nimcf", "llm_planner", "llm_reviewer", "kidiekiruft"},
+        "balanced": {"acc", "nimcf", "llm_planner", "llm_reviewer", "kidiekiruft"},
+        "guarded": {"acc", "nimcf", "llm_planner", "llm_reviewer"},
+        "production": {"acc", "llm_reviewer"},
     }
 
     def __init__(self, config: ACCConfig) -> None:
@@ -423,6 +423,10 @@ class ACCOrchestrator:
             "autonomouscognitivecore": "acc",
             "nimcf": "nimcf",
             "nim": "nimcf",
+            "llm_planner": "llm_planner",
+            "planner": "llm_planner",
+            "llm_reviewer": "llm_reviewer",
+            "reviewer": "llm_reviewer",
             "kidiekiruft": "kidiekiruft",
             "ki_die_ki_ruft": "kidiekiruft",
             "kidiruftki": "kidiekiruft",
@@ -491,18 +495,30 @@ class ACCOrchestrator:
         source = str(task.get("source", "")).lower()
         if source.startswith("nimcf:") or ":nimcf" in source:
             return "nimcf"
+        if source.startswith("llm_planner:") or ":llm_planner" in source or source.startswith("planner:"):
+            return "llm_planner"
+        if source.startswith("llm_reviewer:") or ":llm_reviewer" in source or source.startswith("reviewer:"):
+            return "llm_reviewer"
         if source.startswith("kidiekiruft:") or "kidiruftki" in source or "kiruftki" in source:
             return "kidiekiruft"
 
         title = str(task.get("title", "")).lower()
         if title.startswith("[nimcf]"):
             return "nimcf"
+        if title.startswith("[llm_planner]"):
+            return "llm_planner"
+        if title.startswith("[llm_reviewer]"):
+            return "llm_reviewer"
         if title.startswith("[kidiekiruft]"):
             return "kidiekiruft"
         return None
 
     def _worker_performance_scores(self, candidates: list[str]) -> dict[str, float]:
-        unique = [name for name in candidates if name in {"acc", "nimcf", "kidiekiruft"}]
+        unique = [
+            name
+            for name in candidates
+            if name in {"acc", "nimcf", "llm_planner", "llm_reviewer", "kidiekiruft"}
+        ]
         if not unique:
             return {"acc": 0.5}
 
@@ -900,6 +916,10 @@ class ACCOrchestrator:
     def _execute_task_by_worker(self, task: dict, worker: str) -> dict:
         if worker == "nimcf":
             return self._execute_task_payload_nimcf(task)
+        if worker == "llm_planner":
+            return self._execute_task_payload_llm_planner(task)
+        if worker == "llm_reviewer":
+            return self._execute_task_payload_llm_reviewer(task)
         if worker == "kidiekiruft":
             return self._execute_task_payload_kidiekiruft(task)
         return self._execute_task_payload(task)
@@ -1284,6 +1304,133 @@ class ACCOrchestrator:
             "raw_excerpt": raw.strip()[:500],
         }
 
+    def _execute_task_payload_llm_planner(self, task: dict) -> dict:
+        context = self._parse_task_context(task)
+        default_status = self._normalize_followup_status(
+            str(context.get("planner_default_status", "creative"))
+        )
+        try:
+            base_priority = max(0.0, min(1.0, float(context.get("planner_base_priority", task.get("priority", 0.8)))))
+        except (TypeError, ValueError):
+            base_priority = 0.8
+
+        plan = self.project_planner.plan_goal(
+            goal_text=str(task.get("description", "")),
+            default_status=default_status,
+            base_priority=base_priority,
+        )
+        followups: list[dict] = []
+        for item in plan.tasks:
+            description = item.description
+            if item.acceptance_criteria:
+                criteria = "\n".join(f"- {criterion}" for criterion in item.acceptance_criteria)
+                description = f"{description}\nAkzeptanzkriterien:\n{criteria}"
+            payload: dict[str, object] = {
+                "planner_key": item.key,
+                "title": item.title,
+                "description": description,
+                "status": item.status,
+                "priority": item.priority,
+                "depends_on": list(item.depends_on),
+            }
+            if item.worker is not None:
+                payload["worker"] = item.worker
+            if item.acceptance_criteria:
+                payload["acceptance_criteria"] = item.acceptance_criteria
+            followups.append(payload)
+
+        confidence = 0.78 if not plan.fallback else 0.58
+        return {
+            "status": "done",
+            "result_summary": (
+                f"LLM planner generated {len(followups)} follow-up tasks for plan '{plan.plan_title}'."
+            ),
+            "execution_notes": f"summary={plan.summary}\nfallback={plan.fallback}",
+            "confidence": confidence,
+            "follow_up_tasks": followups,
+            "fallback": plan.fallback,
+            "raw_excerpt": plan.raw_excerpt,
+        }
+
+    def _execute_task_payload_llm_reviewer(self, task: dict) -> dict:
+        description = str(task["description"]).strip()
+        prompt = (
+            "Du bist ein LLM-Reviewer fuer ACC-Tasks.\n"
+            "Bewerte die folgende Aufgabe bzw. das beschriebene Ergebnis.\n"
+            "Antworte NUR als JSON mit den Keys: status, result_summary, execution_notes, confidence, follow_up_tasks.\n"
+            "Erlaubte status-Werte: done, rework, blocked, failed.\n"
+            "follow_up_tasks ist optional und muss eine Liste von Objekten mit title, description, status, priority sein.\n"
+            f"task_key={task.get('task_key')}\n"
+            f"title={task['title']}\n"
+            f"description={description}"
+        )
+        raw = self.llm.generate(prompt)
+        data = self._extract_json_object(raw)
+        fallback = self._is_fallback_text(raw) or data is None
+
+        lower = description.lower()
+        if len(description) < 60:
+            status = "rework"
+            result_summary = "Review: Beschreibung ist zu knapp fuer eine belastbare Freigabe."
+            execution_notes = "Bitte Scope, Ergebnis, Risiken und Akzeptanzkriterien konkretisieren."
+            confidence = 0.53
+            followups: list[dict] = []
+        elif any(marker in lower for marker in ("fehl", "unklar", "todo", "tbd", "offen")):
+            status = "rework"
+            result_summary = "Review: Es gibt noch offene oder unklare Punkte."
+            execution_notes = "Rework empfohlen, bevor der Task als abgeschlossen gilt."
+            confidence = 0.57
+            followups = []
+        else:
+            status = "done"
+            result_summary = "Review: Beschreibung wirkt konsistent und ausreichend konkret."
+            execution_notes = "Keine groben Blocker erkannt. Abschluss oder naechste Phase moeglich."
+            confidence = 0.63
+            followups = []
+
+        if data is not None:
+            if isinstance(data.get("status"), str) and data["status"].strip():
+                status = self._normalize_execution_status(data["status"])
+            if isinstance(data.get("result_summary"), str) and data["result_summary"].strip():
+                result_summary = data["result_summary"].strip()[:500]
+            if isinstance(data.get("execution_notes"), str) and data["execution_notes"].strip():
+                execution_notes = data["execution_notes"].strip()[:1200]
+            if isinstance(data.get("confidence"), (int, float)):
+                confidence = max(0.0, min(1.0, float(data["confidence"])))
+            if isinstance(data.get("follow_up_tasks"), list):
+                parsed: list[dict] = []
+                for item in data["follow_up_tasks"][:3]:
+                    if not isinstance(item, dict):
+                        continue
+                    title = item.get("title")
+                    desc = item.get("description")
+                    if not isinstance(title, str) or not isinstance(desc, str):
+                        continue
+                    status_value = self._normalize_followup_status(str(item.get("status", "idea")))
+                    try:
+                        priority = max(0.0, min(1.0, float(item.get("priority", 0.55))))
+                    except (TypeError, ValueError):
+                        priority = 0.55
+                    parsed.append(
+                        {
+                            "title": title.strip()[:180],
+                            "description": desc.strip()[:1200],
+                            "status": status_value,
+                            "priority": priority,
+                        }
+                    )
+                followups = parsed
+
+        return {
+            "status": self._normalize_execution_status(status),
+            "result_summary": result_summary,
+            "execution_notes": execution_notes,
+            "confidence": confidence,
+            "follow_up_tasks": followups,
+            "fallback": fallback,
+            "raw_excerpt": raw.strip()[:500],
+        }
+
     def _create_followup_tasks(self, task: dict, execution: dict, cycle: int) -> list[int]:
         followups = execution.get("follow_up_tasks")
         if not isinstance(followups, list) or not followups:
@@ -1292,6 +1439,8 @@ class ACCOrchestrator:
         created_ids: list[int] = []
         parent_id = int(task["id"])
         task_key = str(task.get("task_key") or f"TASK-{parent_id}")
+        planner_key_to_task_id: dict[str, int] = {}
+        pending_dependencies: list[tuple[int, list[str]]] = []
         for item in followups:
             if not isinstance(item, dict):
                 continue
@@ -1304,14 +1453,32 @@ class ACCOrchestrator:
                 priority = max(0.0, min(1.0, float(item.get("priority", 0.55))))
             except (TypeError, ValueError):
                 priority = 0.55
+            planner_key = str(item.get("planner_key", "")).strip().lower()
+            acceptance_criteria: list[str] = []
+            raw_acceptance = item.get("acceptance_criteria")
+            if isinstance(raw_acceptance, list):
+                for criterion in raw_acceptance[:6]:
+                    if isinstance(criterion, str) and criterion.strip():
+                        acceptance_criteria.append(criterion.strip()[:220])
+            if acceptance_criteria and "Akzeptanzkriterien:" not in description:
+                criteria = "\n".join(f"- {criterion}" for criterion in acceptance_criteria)
+                description = f"{description}\nAkzeptanzkriterien:\n{criteria}"
+
+            context: dict[str, object] = {"origin_task_key": task_key, "origin_cycle": cycle}
+            worker_value = item.get("worker")
+            if isinstance(worker_value, str) and worker_value.strip():
+                context["worker"] = self._normalize_worker_name(worker_value)
+            if planner_key:
+                context["planner_followup_key"] = planner_key
+
             followup_id = self.state.create_task(
                 title=title[:180],
-                description=description[:1200],
+                description=description[:1400],
                 source=f"acc.executor:followup:{task_key}",
                 status=status,
                 priority=priority,
                 parent_task_id=parent_id,
-                context={"origin_task_key": task_key, "origin_cycle": cycle},
+                context=context,
             )
             self.state.add_agent_event(
                 cycle=cycle,
@@ -1321,7 +1488,25 @@ class ACCOrchestrator:
                 task_id=followup_id,
                 payload={"origin_task_id": parent_id, "origin_task_key": task_key},
             )
+            if planner_key:
+                planner_key_to_task_id[planner_key] = followup_id
+            raw_depends = item.get("depends_on")
+            if isinstance(raw_depends, list):
+                depends_keys = [str(dep).strip().lower() for dep in raw_depends if isinstance(dep, str) and dep.strip()]
+                if depends_keys:
+                    pending_dependencies.append((followup_id, depends_keys))
             created_ids.append(followup_id)
+
+        for followup_id, depends_keys in pending_dependencies:
+            for dep_key in depends_keys:
+                depends_on_task_id = planner_key_to_task_id.get(dep_key)
+                if depends_on_task_id is None or depends_on_task_id == followup_id:
+                    continue
+                self.state.add_task_dependency(
+                    task_id=followup_id,
+                    depends_on_task_id=depends_on_task_id,
+                    dependency_type="hard",
+                )
         return created_ids
 
     @staticmethod
@@ -1338,7 +1523,12 @@ class ACCOrchestrator:
 
     def _task_retry_policy(self, task: dict) -> dict:
         context = self._parse_task_context(task)
-        max_retries = context.get("max_retries", self.config.task_retry_default_max_retries)
+        worker_hint = self._normalize_worker_name(str(context.get("worker", "")))
+        default_max_retries = self.config.task_retry_default_max_retries
+        if worker_hint in {"llm_planner", "llm_reviewer"} and "max_retries" not in context:
+            default_max_retries = 0
+
+        max_retries = context.get("max_retries", default_max_retries)
         backoff = context.get("retry_backoff_sec", self.config.task_retry_default_backoff_sec)
         retry_count = context.get("retry_count", 0)
         retry_on = context.get("retry_on_statuses", ["failed", "rework"])

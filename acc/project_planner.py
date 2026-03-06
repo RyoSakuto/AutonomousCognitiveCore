@@ -49,6 +49,10 @@ class GoalToPlanPlanner:
             "core": "acc",
             "nimcf": "nimcf",
             "nim": "nimcf",
+            "llm_planner": "llm_planner",
+            "planner": "llm_planner",
+            "llm_reviewer": "llm_reviewer",
+            "reviewer": "llm_reviewer",
             "kidiekiruft": "kidiekiruft",
             "orchestrator": "kidiekiruft",
             "ki_die_ki_ruft": "kidiekiruft",
@@ -164,7 +168,7 @@ class GoalToPlanPlanner:
             "Antworte NUR als JSON mit den Keys: plan_title, summary, tasks.\n"
             "tasks muss eine Liste von Objekten mit Keys enthalten: key, title, description, status, priority, depends_on, worker, acceptance_criteria.\n"
             "Erlaubte status-Werte: idea, creative, queued.\n"
-            "Erlaubte worker-Werte: acc, nimcf, kidiekiruft oder leer.\n"
+            "Erlaubte worker-Werte: acc, nimcf, llm_planner, llm_reviewer, kidiekiruft oder leer.\n"
             "Erzeuge 2 bis 5 Tasks, in einer sinnvollen Reihenfolge mit Dependencies ueber depends_on (Liste von task keys).\n"
             f"default_status={normalized_status}\n"
             f"base_priority={clamped_priority:.2f}\n"

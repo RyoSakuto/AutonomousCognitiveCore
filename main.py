@@ -172,19 +172,19 @@ def parse_args() -> argparse.Namespace:
         "--task-worker",
         type=str,
         default=None,
-        help="Optional worker route for task creation (acc|nimcf|kidiekiruft)",
+        help="Optional worker route for task creation (acc|nimcf|llm_planner|llm_reviewer|kidiekiruft)",
     )
     parser.add_argument(
         "--worker-allowlist",
         type=str,
         default=None,
-        help="Comma list of allowed workers (acc,nimcf,kidiekiruft)",
+        help="Comma list of allowed workers (acc,nimcf,llm_planner,llm_reviewer,kidiekiruft)",
     )
     parser.add_argument(
         "--worker-denylist",
         type=str,
         default=None,
-        help="Comma list of denied workers (acc,nimcf,kidiekiruft)",
+        help="Comma list of denied workers (acc,nimcf,llm_planner,llm_reviewer,kidiekiruft)",
     )
     parser.add_argument(
         "--kidiekiruft-root",
@@ -480,8 +480,8 @@ def main() -> None:
             task_context: dict[str, object] = {}
             if args.task_worker is not None:
                 worker_value = args.task_worker.strip().lower()
-                if worker_value not in {"acc", "nimcf", "kidiekiruft"}:
-                    print("Error: --task-worker must be one of acc|nimcf|kidiekiruft.")
+                if worker_value not in {"acc", "nimcf", "llm_planner", "llm_reviewer", "kidiekiruft"}:
+                    print("Error: --task-worker must be one of acc|nimcf|llm_planner|llm_reviewer|kidiekiruft.")
                     return
                 task_context["worker"] = worker_value
             if args.task_max_retries is not None:

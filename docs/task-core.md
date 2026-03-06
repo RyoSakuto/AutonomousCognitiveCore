@@ -126,6 +126,8 @@ Aktueller Stand pro Worker:
 
 - `acc`: interne Execution-Heuristik/LLM-Auswertung mit Follow-up-Unterstuetzung
 - `nimcf`: direkter Aufruf von `nimcf` Coordinator-API (`run_task`)
+- `llm_planner`: erzeugt aus einem groesseren Task-Ziel neue Folge-Tasks inkl. Dependencies
+- `llm_reviewer`: bewertet einen Review-Task und kann Rework/Follow-up-Ideen ableiten
 - `kidiekiruft`: Delegation ueber KIdieKIruft-Orchestrator
 - Default: `task add + dispatch --dry-run` (sicherer Scaffold)
 - Optional live: `dispatch` ohne dry-run (nur mit `WORKER_CMD` aktivierbar)

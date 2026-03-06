@@ -56,6 +56,7 @@ MVP++ implementation of an autonomous cognitive loop based on the blueprint.
 - `dialog_turns` in DB: session-based user/assistant conversation memory
 - `acc/self_modification.py`: safety-gated runtime policy adaptation
 - `acc/llm.py`: local LLM adapter (`none` / `ollama` / `openai_compatible`)
+- `acc/project_planner.py`: goal-to-plan conversion and planner task generation
 - `acc/orchestrator.py`: end-to-end autonomous loop
 
 ## Run once
@@ -97,6 +98,8 @@ Route task execution to a specific worker:
 
 ```bash
 python3 main.py --create-task "Memory-Analyse fuer Kontextabgleich" --task-status queued --task-worker nimcf
+python3 main.py --create-task "Plane kleine Umsetzungsstufen" --task-status queued --task-worker llm_planner
+python3 main.py --create-task "Reviewe ein Zwischenergebnis" --task-status queued --task-worker llm_reviewer
 python3 main.py --create-task "Delegations-Skizze fuer externe Worker" --task-status queued --task-worker kidiekiruft
 python3 main.py --execute-queue-now --task-exec-batch 4
 ```
@@ -197,6 +200,8 @@ python3 main.py --cycles 12 \
   --llm-timeout 90 \
   --llm-model mistralai/ministral-3-14b-reasoning
 ```
+
+For slower local reasoning models, `--llm-timeout 120` to `180` is recommended.
 
 If your server requires a key:
 

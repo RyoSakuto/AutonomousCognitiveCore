@@ -16,6 +16,9 @@
 - Endpoint kann als Base-URL angegeben werden (z. B. `http://192.168.0.56:1234`).
 - Optionaler API-Key via `--llm-api-key` oder `ACC_LLM_API_KEY`.
 - Bei Fehlern: sichere Fallback-Antwort statt Run-Abbruch.
+- Geeignet fuer LM Studio (`/v1/chat/completions`).
+- Empfohlen fuer langsamere lokale Reasoning-Modelle: `--llm-timeout 120` bis `180`.
+- Wird auch von `--plan-goal`, `llm_planner` und `llm_reviewer` verwendet.
 
 ## Embeddings (`acc/embedding.py`)
 
